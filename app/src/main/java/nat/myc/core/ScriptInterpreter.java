@@ -95,8 +95,7 @@ public class ScriptInterpreter {
                 Utils.ZoneSelector selector;
 
                 // Lấy baseWeight chung
-                JSONObject config = cmd.optJSONObject("config");
-                int baseW = (config != null) ? config.optInt("base", 1) : 1;
+                int baseW = cmd.optInt("base", 1);
 
                 Object cached = cmd.opt("cached_selector");
 
@@ -174,7 +173,7 @@ public class ScriptInterpreter {
 
             case "while_loop":
                 JSONObject condition = cmd.getJSONObject("condition");
-                JSONArray subCommands_while = cmd.getJSONArray("subCommands_while");
+                JSONArray subCommands_while = cmd.getJSONArray("children");
                 boolean val = condition.optBoolean("value");
                 Log.d(AppConfig.TAG, "Bắt đầu vòng lặp While");
 
@@ -192,10 +191,24 @@ public class ScriptInterpreter {
                 break;
 
             case "swipe":
-                int startX = cmd.optInt("startX", 0);
-                int startY = cmd.optInt("startY", 0);
-                int endX = cmd.optInt("endX", 0);
-                int endY = cmd.optInt("endY", 0);
+                int startX, startY, endX, endY;
+
+                // 1. Cách mới - Dùng Phần Trăm: psX, psY (percent start) -> peX, peY (percent end)
+                if (cmd.has("psX") && cmd.has("psY") && cmd.has("peX") && cmd.has("peY")) {
+                    // Dùng hàm 2 tham số để lấy tọa độ điểm kèm theo sai số nhỏ (giả lập tay người)
+                    int[] startPoint = Utils.getRandomCoordsInPercent(d, cmd.getDouble("psX"), cmd.getDouble("psY"));
+                    int[] endPoint = Utils.getRandomCoordsInPercent(d, cmd.getDouble("peX"), cmd.getDouble("peY"));
+
+                    startX = startPoint[0];
+                    startY = startPoint[1];
+                    endX = endPoint[0];
+                    endY = endPoint[1];
+                }
+                else {
+                    Log.e(AppConfig.TAG, "Lỗi lệnh swipe: Không tìm thấy tham số tọa độ hợp lệ!");
+                    break; // Thoát lệnh
+                }
+
                 int steps = cmd.optInt("steps", 20);
 
                 Log.d(AppConfig.TAG, "Bắt đầu vuốt: (" + startX + "," + startY + ") -> (" + endX + "," + endY + ") với " + steps + " steps");

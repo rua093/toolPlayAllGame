@@ -77,7 +77,7 @@ public class Utils {
         try {
             // 1. Lấy danh sách điểm màu và lệnh con từ Server gửi về trong cmd
             JSONArray points = cmd.optJSONArray("points");
-            JSONArray subCommands = cmd.optJSONArray("sub_commands");
+            JSONArray subCommands = cmd.optJSONArray("children");
 
             if (points == null || points.length() == 0) return;
 

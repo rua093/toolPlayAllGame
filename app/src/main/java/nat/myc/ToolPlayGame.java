@@ -52,8 +52,11 @@ public class ToolPlayGame {
         Bundle args = InstrumentationRegistry.getArguments();
         String serialArg = args.getString("serial", "UNKNOWN");
         String roomHashArg = args.getString("room_hash", "UNKNOWN");
+        String scriptName = args.getString("script", "UNKNOWN");
         mSession.setSerial(serialArg); // Lưu vào session
         mSession.setRoom_hash(roomHashArg);
+        mSession.setScript_name(scriptName);
+
 
         Log.d(AppConfig.TAG, "Tool Start. Serial: " + mSession.getSerial());
 
@@ -61,21 +64,28 @@ public class ToolPlayGame {
             try {
                 Log.d(AppConfig.TAG, "--- Đang tải Script từ Server ---");
 
-//                String jsonResponse = mNetwork.getScriptFromServer();
-                String jsonResponse = getMockScript();
+                String jsonResponse = mNetwork.getScriptFromServer(scriptName);
 
-//                if (jsonResponse == null || jsonResponse.isEmpty()) {
-//                    Log.e(AppConfig.TAG, "Không lấy được kịch bản. Thử lại sau 10s...");
-//                    Utils.sleep(10000);
-//                    continue;
-//                }
-
-                JSONObject script = new JSONObject(jsonResponse);
-                JSONObject settings = script.optJSONObject("settings");
-                if (settings != null) {
-                    AppConfig.PKG_MAIN = settings.optString("pkg_main", AppConfig.PKG_MAIN);
-                    AppConfig.ACT_MAIN = settings.optString("act_main", AppConfig.ACT_MAIN);
+                if (jsonResponse == null || jsonResponse.isEmpty()) {
+                    Log.e(AppConfig.TAG, "Không lấy được kịch bản. Thử lại sau 10s...");
+                    Utils.sleep(10000);
+                    continue;
                 }
+
+                // 1. Parse JSON ngoài cùng
+                JSONObject rootResponse = new JSONObject(jsonResponse);
+
+                // 2. (Tuỳ chọn) Kiểm tra cờ success xem server có trả về lỗi logic không
+                if (!rootResponse.optBoolean("success", false)) {
+                    Log.e(AppConfig.TAG, "API báo lỗi: " + rootResponse.optString("message", "Unknown error"));
+                    Utils.sleep(10000);
+                    continue;
+                }
+
+                JSONObject script = rootResponse.getJSONObject("data");
+                AppConfig.PKG_MAIN = script.optString("pkg_main", AppConfig.PKG_MAIN);
+                AppConfig.ACT_MAIN = script.optString("act", AppConfig.ACT_MAIN);
+                AppConfig.PKG_GAME = script.optString("pkg_game", AppConfig.PKG_GAME);
                 JSONArray commands = script.getJSONArray("commands");
                 while (true) {
                     try {

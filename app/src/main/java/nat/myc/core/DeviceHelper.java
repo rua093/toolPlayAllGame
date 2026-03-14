@@ -38,20 +38,48 @@ public class DeviceHelper {
         try {
             BySelector selector = null;
 
-            // Các thuộc tính phổ biến có thể có trong cây UI
-            if (selectors.has("pkg")) selector = (selector == null) ? By.pkg(selectors.getString("pkg")) : selector.pkg(selectors.getString("pkg"));
-            if (selectors.has("clazz")) selector = (selector == null) ? By.clazz(selectors.getString("clazz")) : selector.clazz(selectors.getString("clazz"));
-            if (selectors.has("text")) selector = (selector == null) ? By.text(selectors.getString("text")) : selector.text(selectors.getString("text"));
-            if (selectors.has("desc")) selector = (selector == null) ? By.desc(selectors.getString("desc")) : selector.desc(selectors.getString("desc"));
-            if (selectors.has("res")) selector = (selector == null) ? By.res(selectors.getString("res")) : selector.res(selectors.getString("res"));
+            // Xử lý pkg
+            if (selectors.has("pkg") && !selectors.getString("pkg").trim().isEmpty()) {
+                String pkg = selectors.getString("pkg");
+                selector = (selector == null) ? By.pkg(pkg) : selector.pkg(pkg);
+            }
+
+            // Xử lý clazz
+            if (selectors.has("clazz") && !selectors.getString("clazz").trim().isEmpty()) {
+                String clazz = selectors.getString("clazz");
+                selector = (selector == null) ? By.clazz(clazz) : selector.clazz(clazz);
+            }
+
+            // Xử lý text
+            if (selectors.has("text") && !selectors.getString("text").isEmpty()) { // Text có thể chứa khoảng trắng nên ko dùng trim()
+                String text = selectors.getString("text");
+                selector = (selector == null) ? By.text(text) : selector.text(text);
+            }
+
+            // Xử lý desc
+            if (selectors.has("desc") && !selectors.getString("desc").isEmpty()) {
+                String desc = selectors.getString("desc");
+                selector = (selector == null) ? By.desc(desc) : selector.desc(desc);
+            }
+
+            // Xử lý res
+            if (selectors.has("res") && !selectors.getString("res").trim().isEmpty()) {
+                String res = selectors.getString("res");
+                selector = (selector == null) ? By.res(res) : selector.res(res);
+            }
 
             // Match tương đối (contains)
-            if (selectors.has("text_contains")) selector = (selector == null) ? By.textContains(selectors.getString("text_contains")) : selector.textContains(selectors.getString("text_contains"));
+            if (selectors.has("text_contains") && !selectors.getString("text_contains").isEmpty()) {
+                String textContains = selectors.getString("text_contains");
+                selector = (selector == null) ? By.textContains(textContains) : selector.textContains(textContains);
+            }
 
+            // Nếu file JSON trống hoặc toàn chuỗi rỗng, không làm gì cả
             if (selector == null) return false;
 
             return device.wait(Until.hasObject(selector), 2000);
         } catch (Exception e) {
+            e.printStackTrace(); // Nên print log ra để dễ debug nếu JSON sai format
             return false;
         }
     }

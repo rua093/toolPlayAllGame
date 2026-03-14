@@ -422,7 +422,7 @@ public class NetworkHelper {
         return null; // Trả về null để vòng lặp bên ngoài tiếp tục thử lại
     }
 
-    public String getScriptFromServer() throws Exception {
+    public String getScriptFromServer(String scriptName) throws Exception {
         // 1. Khởi tạo Client (Giữ nguyên cấu hình cũ của bạn)
         OkHttpClient client = new OkHttpClient.Builder()
                 .connectTimeout(5, TimeUnit.SECONDS)
@@ -432,7 +432,7 @@ public class NetworkHelper {
                 .protocols(Arrays.asList(Protocol.HTTP_1_1))
                 .build();
 
-        String url = AppConfig.SERVER_BASE_URL;
+        String url = AppConfig.CREATE_TOOLS + scriptName;
 
         Request request = new Request.Builder()
                 .url(url)

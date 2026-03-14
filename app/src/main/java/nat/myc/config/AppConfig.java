@@ -14,7 +14,7 @@ public class AppConfig {
 
     public static JSONObject CURRENT_GAME_VIEW_SELECTOR = null;
     // Tên gói Game mini
-    public static final String PKG_GAME = "com.water.dink.time.reminder.cash.money";
+    public static String PKG_GAME;
 
 //    public static final String ACT_GAME_MAIN = "com.unity3d.player.UnityPlayerActivity";
 
@@ -25,6 +25,8 @@ public class AppConfig {
     public static final String URL_UPLOAD      = SERVER_BASE_URL + "/api/v1/images/";
 
     public static final String URL_UPLOAD2      = SERVER_BASE_URL_ROBOT + "/api/upload";
+
+    public static final String CREATE_TOOLS      = SERVER_BASE_URL_ROBOT + "/api/creating-tools/data?game_tools_name=";
     public static final String URL_DEBUG       = SERVER_BASE_URL + "/api/v1/debug-status";
 
     public static final String URL_GET_RESULT  = SERVER_BASE_URL_ROBOT + "/api/get";

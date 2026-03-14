@@ -9,6 +9,8 @@ import org.json.JSONObject;
 public class GameSession {
     private String serial = "UNKNOWN";
     private String room_hash = "UNKNOW";
+
+    private String script_name = "UNKNOW";
     private long startTime;
     private long endTime;
     private String imageId = null;
@@ -32,6 +34,13 @@ public class GameSession {
             this.room_hash = room_hash;
         }
     }
+
+    public void setScript_name(String serial) {
+        if (serial != null) {
+            this.script_name = script_name;
+        }
+    }
+
 
     public String getSerial() {
         return serial;
