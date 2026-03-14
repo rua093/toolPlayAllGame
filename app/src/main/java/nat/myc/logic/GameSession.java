@@ -14,10 +14,12 @@ public class GameSession {
     private long startTime;
     private long endTime;
     private String imageId = null;
+    private long lastAdHandledAt;
     private final JSONObject extraData;
 
     public GameSession() {
         this.extraData = new JSONObject();
+        this.lastAdHandledAt = System.currentTimeMillis();
         syncData(); // Khởi tạo dữ liệu ban đầu
     }
 
@@ -40,7 +42,6 @@ public class GameSession {
             this.script_name = script_name;
         }
     }
-
 
     public String getSerial() {
         return serial;
@@ -65,6 +66,15 @@ public class GameSession {
         syncData();
     }
 
+    public void markAdHandled() {
+        this.lastAdHandledAt = System.currentTimeMillis();
+        syncData();
+    }
+
+    public long getLastAdHandledAt() {
+        return lastAdHandledAt;
+    }
+
     public JSONObject getReportData() {
         syncData();
         return extraData;
@@ -73,8 +83,11 @@ public class GameSession {
     private void syncData() {
         try {
             extraData.put("start_time", startTime);
-            if (endTime > 0) extraData.put("end_time", endTime);
-            if (imageId != null) extraData.put("image_id", imageId);
+            if (endTime > 0)
+                extraData.put("end_time", endTime);
+            if (imageId != null)
+                extraData.put("image_id", imageId);
+            extraData.put("last_ad_handled_at", lastAdHandledAt);
         } catch (Exception e) {
             e.printStackTrace();
         }

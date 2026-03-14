@@ -29,6 +29,7 @@ public class ToolPlayGame {
     private NetworkHelper mNetwork;
     private GameSession mSession;
 
+    private static final long NO_AD_RESTART_MS = 5 * 60 * 1000L;
 
     @Before
     public void setup() {
@@ -43,7 +44,7 @@ public class ToolPlayGame {
         DeviceHelper mDevice = new DeviceHelper(d);
         AdManager mAdManager = new AdManager(d, mNetwork, mTouch, mDevice);
         // Khởi tạo Bộ thông dịch
-        interpreter = new ScriptInterpreter(mAdManager, mTouch, mDevice, mSession,mNetwork);
+        interpreter = new ScriptInterpreter(mAdManager, mTouch, mDevice, mSession, mNetwork);
     }
 
     @Test
@@ -57,10 +58,9 @@ public class ToolPlayGame {
         mSession.setRoom_hash(roomHashArg);
         mSession.setScript_name(scriptName);
 
-
         Log.d(AppConfig.TAG, "Tool Start. Serial: " + mSession.getSerial());
 
-        while (true){
+        while (true) {
             try {
                 Log.d(AppConfig.TAG, "--- Đang tải Script từ Server ---");
 
@@ -90,6 +90,13 @@ public class ToolPlayGame {
                 while (true) {
                     try {
                         for (int i = 0; i < commands.length(); i++) {
+                            boolean isRestarted = checkAndRestartGameIfNoAds();
+                            if (isRestarted) {
+                                Log.w(AppConfig.TAG,
+                                        "Game bị restart do thiếu Ads. Hủy kịch bản hiện tại, chạy lại từ đầu.");
+                                break;
+                            }
+
                             interpreter.executeCommand(commands.getJSONObject(i));
                         }
                     } catch (Exception e) {
@@ -105,6 +112,36 @@ public class ToolPlayGame {
             Utils.sleepRandom(2000, 4000);
         }
     }
+
+    private boolean checkAndRestartGameIfNoAds() {
+        long lastAd = mSession.getLastAdHandledAt();
+        if (lastAd <= 0) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastAd < NO_AD_RESTART_MS) {
+            return false;
+        }
+
+        String pkg = (AppConfig.PKG_GAME != null && !AppConfig.PKG_GAME.isEmpty())
+                ? AppConfig.PKG_GAME
+                : AppConfig.PKG_MAIN;
+
+        try {
+            Log.d(AppConfig.TAG, "Đã quá 5 phút không có quảng cáo. Restart game: " + pkg);
+            d.executeShellCommand("am force-stop " + pkg);
+            Utils.sleep(2000);
+            d.executeShellCommand("monkey -p " + pkg + " -c android.intent.category.LAUNCHER 1");
+            Utils.sleep(8000);
+            // Chỉ reset mốc thời gian sau khi đã thực hiện xong lệnh restart
+            mSession.markAdHandled();
+            return true;
+        } catch (Exception e) {
+            Log.e(AppConfig.TAG, "Lỗi khi restart game do không có quảng cáo: " + e.getMessage());
+            return false;
+        }
+    }
+
     private String getMockScript() {
         return "{" +
                 "  \"settings\": {" +
@@ -140,7 +177,8 @@ public class ToolPlayGame {
                 "          \"type\": \"random_zones\"," +
                 "          \"config\": { \"base\": 1 }," +
                 "          \"zones\": [" +
-                "            { \"type\": \"click\", \"px1\": 45.90, \"py1\": 61.84, \"px2\": 54.31, \"py2\": 67.34, \"step\": 10 }" +
+                "            { \"type\": \"click\", \"px1\": 45.90, \"py1\": 61.84, \"px2\": 54.31, \"py2\": 67.34, \"step\": 10 }"
+                +
                 "          ]" +
                 "        }," +
                 "        { \"type\": \"sleep_random\", \"min\": 800, \"max\": 1000 }" +

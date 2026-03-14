@@ -44,8 +44,9 @@ public class AdManager {
 
     /**
      * Hàm xử lý quảng cáo chính.
+     * 
      * @param timeoutMs Thời gian tối đa để thoát quảng cáo.
-     * @param session Đối tượng quản lý phiên (lưu thống kê).
+     * @param session   Đối tượng quản lý phiên (lưu thống kê).
      */
     public void handleAds(boolean myTick, long timeoutMs, GameSession session) throws Exception {
         try {
@@ -60,11 +61,12 @@ public class AdManager {
             }
             if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                 Log.d(AppConfig.TAG, ">> Đã về GameView. Pass Ads.");
+                session.markAdHandled();
                 return;
             }
             if (myTick) {
                 Log.d(AppConfig.TAG, "Đợi lần đầu");
-                Utils.sleep(Utils.getRandom(20000,35000));
+                Utils.sleep(Utils.getRandom(20000, 35000));
                 Log.d(AppConfig.TAG, "Đợi xong");
             }
             Log.d(AppConfig.TAG, "--- Bắt đầu quy trình xử lý Ads ---");
@@ -72,17 +74,20 @@ public class AdManager {
                 // 1. Kiểm tra thành công: Đã thấy GameView
                 if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                     Log.d(AppConfig.TAG, ">> Đã về GameView. Pass Ads.");
+                    session.markAdHandled();
                     return;
                 }
-                clickXYAndReturnIfNeeded(1352,142);
+                clickXYAndReturnIfNeeded(1352, 142);
                 Utils.sleep(1000);
                 if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                     Log.d(AppConfig.TAG, ">> Đã về GameView. Pass Ads.");
+                    session.markAdHandled();
                     return;
                 }
                 // 2. Thử bấm các điểm lịch sử (Cache)
                 Log.d(AppConfig.TAG, "Thử bấm các điểm trong Cache...");
                 if (handlePoint.loopRightPoint(d)) {
+                    session.markAdHandled();
                     return;
                 }
                 // 3. Tìm các nút dựa trên hình ảnh (Pattern Class từ Server)
@@ -92,7 +97,8 @@ public class AdManager {
 
                 // Lọc nút có khả năng là Close Button
                 for (Rect r : rects) {
-                    if (isLikelyCloseButton(r, d)) potentialButtons.add(r);
+                    if (isLikelyCloseButton(r, d))
+                        potentialButtons.add(r);
                 }
                 Log.d(AppConfig.TAG, "Tìm thấy " + potentialButtons.size() + " nút tiềm năng.");
 
@@ -107,10 +113,11 @@ public class AdManager {
                     Log.d(AppConfig.TAG, "-> Click nút ảnh #" + i++ + " tại: (" + xx + "," + yy + ")");
 
                     clickXYAndReturnIfNeeded(xx, yy);
-                    Utils.sleepRandom(500,1500);
+                    Utils.sleepRandom(500, 1500);
                     if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                         Log.d(AppConfig.TAG, "Thành công! Lưu điểm cache: (" + xx + "," + yy + ")");
                         handlePoint.addPointRight(xx, yy);
+                        session.markAdHandled();
                         return;
                     } else {
                         d.pressBack(); // Nếu bấm sai có thể bị dẫn đi link, back lại
@@ -124,7 +131,8 @@ public class AdManager {
                     texts = mNetwork.getAdButtonTextsFromServer(AppConfig.PKG_MAIN);
                 } catch (Exception e) {
                     Log.e(AppConfig.TAG, "Lỗi lấy text server, dùng fallback.", e);
-                    texts = new ArrayList<>(Arrays.asList("See next", "Stay and continue", "Continue", "See Next", "X", "x", "CLOSE", "Close"));
+                    texts = new ArrayList<>(Arrays.asList("See next", "Stay and continue", "Continue", "See Next", "X",
+                            "x", "CLOSE", "Close"));
                 }
 
                 List<Rect> findText = findByText(d, texts);
@@ -134,12 +142,13 @@ public class AdManager {
                             Utils.getRandom(r.centerY() - 5, r.centerY() + 5));
                     Utils.sleepRandom(300, 500);
                     if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
+                        Log.d(AppConfig.TAG, "Thành công! Bấm nút text.");
+                        session.markAdHandled();
                         return;
                     }
                     Log.d(AppConfig.TAG, "Đợi 5s sau khi bấm text...");
                     Utils.sleep(5000);
                 }
-
 
             }
 
@@ -152,7 +161,8 @@ public class AdManager {
                 // 1. Chụp ảnh màn hình lỗi
                 Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
                 File cacheDir = context.getExternalCacheDir();
-                if (cacheDir == null) cacheDir = context.getCacheDir();
+                if (cacheDir == null)
+                    cacheDir = context.getCacheDir();
 
                 File screenshotFile = new File(cacheDir, "screenshot_fail.png");
                 boolean success = mDevice.takeSafeScreenshot(screenshotFile);
@@ -167,9 +177,10 @@ public class AdManager {
                     }
                 }
 
-                // 2. Gửi báo cáo lỗi lên server
+                // 2. Gửi báo cáo lỗi lên server (Giới hạn tối đa 3 lần thử)
                 boolean reported = false;
-                while (!reported) {
+                int retryCount = 0;
+                while (!reported && retryCount < 3) {
                     try {
                         session.markEndTime(); // Cập nhật thời gian
                         mNetwork.sendSerialLogToServer(
@@ -177,34 +188,55 @@ public class AdManager {
                                 session.getRoom_hash(),
                                 "error",
                                 session.getReportData(),
-                                AppConfig.PKG_MAIN
-                        );
+                                AppConfig.PKG_MAIN);
                         reported = true;
-                        Log.d(AppConfig.TAG, "Đã gửi báo cáo lỗi.");
+                        Log.d(AppConfig.TAG, "Đã gửi báo cáo lỗi thành công.");
                     } catch (Exception e) {
-                        Log.e(AppConfig.TAG, "Gửi log lỗi thất bại, thử lại sau 5s...", e);
+                        retryCount++;
+                        Log.e(AppConfig.TAG, "Gửi log lỗi thất bại lần " + retryCount + ". Thử lại sau 5s...", e);
                         Utils.sleep(5000);
                     }
                 }
 
-                // 3. Vòng lặp chờ Admin debug (Giữ nguyên màn hình)
-                Log.d(AppConfig.TAG, "Kiểm tra chế độ chờ Admin Debug...");
-                while (true) {
+                // 3. Vòng lặp chờ Admin debug (Giới hạn tối đa 5 phút)
+                Log.d(AppConfig.TAG, "Kiểm tra chế độ chờ Admin Debug (Tối đa 5 phút)...");
+                long adminWaitStart = System.currentTimeMillis();
+                long maxAdminWait = 5 * 60 * 1000; // 5 phút
+                int lastAdminStatus = -1; // Dùng để tối ưu log
+
+                while (System.currentTimeMillis() - adminWaitStart < maxAdminWait) {
                     try {
                         int adminStatus = mNetwork.getAdminDebugStatus();
                         if (adminStatus == 0) {
-                            Log.d(AppConfig.TAG, "Admin Status = "+adminStatus);
+                            Log.d(AppConfig.TAG, "Admin Status = 0 (Đã clear). Tiếp tục chạy.");
                             break;
                         }
-                        Log.d(AppConfig.TAG, "Admin Status = "+adminStatus);
-                        Utils.sleep(10000);
+
+                        // Tối ưu log: Chỉ in ra khi status thay đổi để tránh spam log liên tục mỗi 10s
+                        if (adminStatus != lastAdminStatus) {
+                            Log.d(AppConfig.TAG, "Admin Status = " + adminStatus + ". Đang chờ Admin xử lý...");
+                            lastAdminStatus = adminStatus;
+                        }
+
+                        Utils.sleep(10000); // Vẫn sleep 10s để check API liên tục
                     } catch (Exception e) {
                         Log.e(AppConfig.TAG, "Lỗi mạng khi check Admin Status: " + e.getMessage());
                         Utils.sleep(10000);
                     }
                 }
+
+                // 4. Tự phục hồi: Nếu vượt quá 5 phút mà vẫn chưa thấy GameView, force stop
+                // game để reset
+                if (!mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
+                    Log.d(AppConfig.TAG, "Hết thời gian chờ Admin, tiến hành Reset Game...");
+                    // Lưu ý: Đảm bảo đối tượng 'd' (UiDevice) đã được khai báo ở scope bên ngoài
+                    d.executeShellCommand("am force-stop " + AppConfig.PKG_GAME);
+                    Utils.sleep(2000);
+                    d.executeShellCommand("monkey -p " + AppConfig.PKG_GAME + " -c android.intent.category.LAUNCHER 1");
+                    Utils.sleep(8000); // Chờ game load lại
+                }
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             Log.e(AppConfig.TAG, "Exception trong handleAds: " + e.getMessage());
             throw e;
         }
@@ -252,12 +284,13 @@ public class AdManager {
     }
 
     private boolean isLikelyCloseButton(Rect br, UiDevice device) {
-        if (br == null) return false;
+        if (br == null)
+            return false;
         int w = device.getDisplayWidth();
         int h = device.getDisplayHeight();
         // Nằm trên top band (20%), góc trái/phải, kích thước nhỏ, không sát mép
         boolean inTopBand = br.centerY() < (h * 0.20);
-        boolean inLeftCorner  = br.centerX() <= (w * 0.20);
+        boolean inLeftCorner = br.centerX() <= (w * 0.20);
         boolean inRightCorner = br.centerX() >= (w * 0.80);
         boolean small = br.width() <= (w * 0.20) && br.height() <= (h * 0.1);
         int edgePad = 0;
@@ -265,7 +298,7 @@ public class AdManager {
         return inTopBand && (inLeftCorner || inRightCorner) && small && notTooEdge;
     }
 
-    private List<Rect> findByText(UiDevice device, List<String> texts){
+    private List<Rect> findByText(UiDevice device, List<String> texts) {
         List<Rect> res = new ArrayList<>();
         for (String t : texts) {
             UiObject2 obj = device.findObject(By.text(t));
@@ -292,14 +325,16 @@ public class AdManager {
 
         while (System.currentTimeMillis() - start < maxWait) {
             nodes = device.findObjects(By.clazz(classes));
-            if (nodes != null && !nodes.isEmpty()) break;
+            if (nodes != null && !nodes.isEmpty())
+                break;
             Utils.sleep(300);
         }
-        if (nodes == null || nodes.isEmpty()) return rects;
+        if (nodes == null || nodes.isEmpty())
+            return rects;
         long start_check = System.currentTimeMillis();
         for (UiObject2 n : nodes) {
             long end_check = System.currentTimeMillis();
-            if(end_check - start_check > 1000 * 20){
+            if (end_check - start_check > 1000 * 20) {
                 Log.d(AppConfig.TAG, "Hết tìm nổi rồi");
                 break;
             }
@@ -311,7 +346,7 @@ public class AdManager {
                         rects.add(new Rect(b));
                     }
                 }
-            } catch (Exception e){
+            } catch (Exception e) {
             }
         }
         return rects;
@@ -323,7 +358,11 @@ public class AdManager {
 
     private class Point {
         public int x, y;
-        Point(int x, int y){ this.x = x; this.y = y; }
+
+        Point(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
     }
 
     private class HandlePoint {
@@ -335,10 +374,10 @@ public class AdManager {
             for (Point p : pointsResults) {
                 int x = Utils.getRandom(p.x - 5, p.x + 5);
                 int y = Utils.getRandom(p.y - 5, p.y + 5);
-                Log.d(AppConfig.TAG,"[Cache] Nhấn nút "+ i++ +": "+x+","+y);
+                Log.d(AppConfig.TAG, "[Cache] Nhấn nút " + i++ + ": " + x + "," + y);
                 clickXYAndReturnIfNeeded(x, y);
                 Utils.sleep(1000);
-                if(mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)){
+                if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                     return true;
                 }
             }
@@ -353,7 +392,7 @@ public class AdManager {
                 long dy = (long) y - p.y;
                 long d2 = dx * dx + dy * dy;
                 // Nếu điểm mới gần điểm cũ (trong vòng 48px) -> Update điểm cũ
-                if (d2 < bestD2 && d2 <= 48*48) {
+                if (d2 < bestD2 && d2 <= 48 * 48) {
                     bestD2 = d2;
                     best = p;
                 }
