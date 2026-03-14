@@ -194,10 +194,10 @@ public class ScriptInterpreter {
                 int startX, startY, endX, endY;
 
                 // 1. Cách mới - Dùng Phần Trăm: psX, psY (percent start) -> peX, peY (percent end)
-                if (cmd.has("psX") && cmd.has("psY") && cmd.has("peX") && cmd.has("peY")) {
+                if (cmd.has("px1") && cmd.has("px2") && cmd.has("py1") && cmd.has("py2")) {
                     // Dùng hàm 2 tham số để lấy tọa độ điểm kèm theo sai số nhỏ (giả lập tay người)
-                    int[] startPoint = Utils.getRandomCoordsInPercent(d, cmd.getDouble("psX"), cmd.getDouble("psY"));
-                    int[] endPoint = Utils.getRandomCoordsInPercent(d, cmd.getDouble("peX"), cmd.getDouble("peY"));
+                    int[] startPoint = Utils.getRandomCoordsInPercent(d, cmd.getDouble("px1"), cmd.getDouble("py1"));
+                    int[] endPoint = Utils.getRandomCoordsInPercent(d, cmd.getDouble("px2"), cmd.getDouble("py2"));
 
                     startX = startPoint[0];
                     startY = startPoint[1];
