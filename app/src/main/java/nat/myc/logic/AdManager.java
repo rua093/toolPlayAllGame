@@ -61,7 +61,6 @@ public class AdManager {
             }
             if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                 Log.d(AppConfig.TAG, ">> Đã về GameView. Pass Ads.");
-                session.markAdHandled();
                 return;
             }
             if (myTick) {
@@ -74,20 +73,17 @@ public class AdManager {
                 // 1. Kiểm tra thành công: Đã thấy GameView
                 if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                     Log.d(AppConfig.TAG, ">> Đã về GameView. Pass Ads.");
-                    session.markAdHandled();
                     return;
                 }
                 clickXYAndReturnIfNeeded(1352, 142);
                 Utils.sleep(1000);
                 if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                     Log.d(AppConfig.TAG, ">> Đã về GameView. Pass Ads.");
-                    session.markAdHandled();
                     return;
                 }
                 // 2. Thử bấm các điểm lịch sử (Cache)
                 Log.d(AppConfig.TAG, "Thử bấm các điểm trong Cache...");
                 if (handlePoint.loopRightPoint(d)) {
-                    session.markAdHandled();
                     return;
                 }
                 // 3. Tìm các nút dựa trên hình ảnh (Pattern Class từ Server)
@@ -117,7 +113,6 @@ public class AdManager {
                     if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                         Log.d(AppConfig.TAG, "Thành công! Lưu điểm cache: (" + xx + "," + yy + ")");
                         handlePoint.addPointRight(xx, yy);
-                        session.markAdHandled();
                         return;
                     } else {
                         d.pressBack(); // Nếu bấm sai có thể bị dẫn đi link, back lại
@@ -143,7 +138,6 @@ public class AdManager {
                     Utils.sleepRandom(300, 500);
                     if (mDevice.isObjectVisible(AppConfig.CURRENT_GAME_VIEW_SELECTOR)) {
                         Log.d(AppConfig.TAG, "Thành công! Bấm nút text.");
-                        session.markAdHandled();
                         return;
                     }
                     Log.d(AppConfig.TAG, "Đợi 5s sau khi bấm text...");

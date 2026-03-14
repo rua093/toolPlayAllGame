@@ -48,4 +48,5 @@ public class AppConfig {
     public static final long ACTIVE_MAX_MS = 30 * 60_000;  // 50 phút
     public static final long BREAK_MIN_MS  =  3 * 60_000;  // 8 phút
     public static final long BREAK_MAX_MS  =  5 * 60_000; // 13 phút
+    public static final long NO_AD_RESTART_MS = 5 * 60 * 1000L;
 }

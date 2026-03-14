@@ -129,6 +129,10 @@ public class ScriptInterpreter {
                 break;
 
             case "check_gameview":
+                boolean isRestarted = checkAndRestartGameIfNoAds();
+                if (isRestarted) {
+                    throw new Exception("Game bị restart do thiếu Ads. Hủy kịch bản hiện tại, chạy lại từ đầu.");
+                }
 //                Log.d(AppConfig.TAG, "Kiểm tra GameView");
                 JSONObject selectorRules = cmd.getJSONObject("selectors");
 
@@ -138,6 +142,7 @@ public class ScriptInterpreter {
                 boolean found = mDevice.isObjectVisible(selectorRules);
                 if (!found) {
                     Log.w(AppConfig.TAG, "Không thấy GameView! Kích hoạt xử lý quảng cáo...");
+                    mSession.markAdHandled();
                     mAdManager.handleAds(true, 180000, mSession);
                     Utils.sleep(500);
                     if (!mDevice.isObjectVisible(selectorRules)) {
@@ -227,4 +232,34 @@ public class ScriptInterpreter {
                 Log.w(AppConfig.TAG, "Lệnh không xác định: " + type);
         }
     }
+    
+    private boolean checkAndRestartGameIfNoAds() {
+        long lastAd = mSession.getLastAdHandledAt();
+        if (lastAd <= 0) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastAd < AppConfig.NO_AD_RESTART_MS) {
+            return false;
+        }
+
+        String pkg = (AppConfig.PKG_GAME != null && !AppConfig.PKG_GAME.isEmpty())
+                ? AppConfig.PKG_GAME
+                : AppConfig.PKG_MAIN;
+
+        try {
+            Log.d(AppConfig.TAG, "Đã quá 5 phút không có quảng cáo. Restart game: " + pkg);
+            d.executeShellCommand("am force-stop " + pkg);
+            Utils.sleep(2000);
+            d.executeShellCommand("monkey -p " + pkg + " -c android.intent.category.LAUNCHER 1");
+            Utils.sleep(8000);
+            // Chỉ reset mốc thời gian sau khi đã thực hiện xong lệnh restart
+            mSession.markAdHandled();
+            return true;
+        } catch (Exception e) {
+            Log.e(AppConfig.TAG, "Lỗi khi restart game do không có quảng cáo: " + e.getMessage());
+            return false;
+        }
+    }
+
 }
